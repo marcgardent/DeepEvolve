@@ -5,7 +5,7 @@
 import random
 import logging
 
-from genome import Genome
+from .genome import Genome
 
 class AllGenomes():
     """Store all genomes
