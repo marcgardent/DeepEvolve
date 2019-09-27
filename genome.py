@@ -5,7 +5,7 @@ import logging
 import hashlib
 import copy
 
-from .train import train_and_score
+
 
 class Genome():
     """
@@ -100,17 +100,17 @@ class Genome():
         self.geneparam = geneparam
 
         self.update_hash()
-
-    def train(self, trainingset):
+    
+    def train(self, train_and_score_callback):
         """Train the genome and record the accuracy.
 
         Args:
-            dataset (str): Name of dataset to use.
+            train_and_score_callback (func): (geneparam) -> accuracy:
 
         """
         if self.accuracy == 0.0: #don't bother retraining ones we already trained 
-            self.accuracy = train_and_score(self, trainingset)
-
+            self.accuracy = train_and_score_callback(self.geneparam)
+    
     def print_genome(self):
         """Print out a genome."""
         self.print_geneparam()

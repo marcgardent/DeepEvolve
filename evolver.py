@@ -82,11 +82,6 @@ class Evolver():
                 self.master.add_genome(genome)
 
             i += 1
-
-        #self.master.print_all_genomes()
-        
-        #exit()
-
         return pop
 
     @staticmethod
