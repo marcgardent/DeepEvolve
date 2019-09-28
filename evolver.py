@@ -20,12 +20,10 @@ from .allgenomes import AllGenomes
 
 class Evolver():
     """Class that implements genetic algorithm."""
-
-    def __init__(self, all_possible_genes, retain=0.15, random_select=0.1, mutate_chance=0.3):
+    def __init__(self, retain=0.15, random_select=0.1, mutate_chance=0.3):
         """Create an optimizer.
 
         Args:
-            all_possible_genes (dict): Possible genome parameters
             retain (float): Percentage of population to retain after
                 each generation
             random_select (float): Probability of a rejected genome
@@ -34,8 +32,6 @@ class Evolver():
                 randomly mutated
 
         """
-
-        self.all_possible_genes = all_possible_genes
         self.retain             = retain
         self.random_select      = random_select
         self.mutate_chance      = mutate_chance
@@ -43,7 +39,7 @@ class Evolver():
         #set the ID gen
         self.ids = IDgen()
         
-    def create_population(self, count):
+    def create_population(self, mould, count):
         """Create a population of random networks.
 
         Args:
@@ -57,23 +53,11 @@ class Evolver():
         self.master = AllGenomes()
         pop = []
 
-        
         for i in range(count):
-            
-            # Initialize a new genome.
-            genome = Genome( self.all_possible_genes, {}, self.ids.get_next_ID(), 0, 0, self.ids.get_Gen() )
-
-            # Set it to random parameters.
+            genome = Genome( mould.clone(), self.ids.get_next_ID(), 0, 0, self.ids.get_Gen() )
             genome.set_genes_random()
-
-            while self.master.is_duplicate( genome ):
-                genome.mutate_one_gene()
-
-            # Add the genome to our population.
+            self.register_new_genome(genome)
             pop.append(genome)
-
-            self.master.add_genome(genome)
-
         return pop
 
     @staticmethod
@@ -102,10 +86,9 @@ class Evolver():
             father (dict): genome parameters
 
         Returns:
-            (list): Two network objects
+            (tuple): Two network objects
 
         """
-        children = []
 
         #where do we recombine? 0, 1, 2, 3, 4... N?
         #with four genes, there are three choices for the recombination
@@ -113,33 +96,30 @@ class Evolver():
         #0 -> no recombination, and N == length of dictionary -> no recombination
         #0 and 4 just (re)create more copies of the parents
         #so the range is always 1 to len(all_possible_genes) - 1
-        pcl = len(self.all_possible_genes)
+
+        child1 = mom.genes.clone()
+        child2 = dad.genes.clone()
+        child1_genes = tuple(child1.all_genes())
+        child2_genes = tuple(child2.all_genes())
+        pcl = len(child1_genes)
         
-        recomb_loc = random.randint(1,pcl - 1) 
+        assert len(child1_genes) == len(child2_genes), "incompatible genome!"
+        assert pcl>=2, "insufficient genes to recombinate"
 
-        #for _ in range(2): #make _two_ children - could also make more
-        child1 = {}
-        child2 = {}
-
-        #enforce defined genome order using list 
-        #keys = ['nb_neurons', 'nb_layers', 'activation', 'optimizer']
-        keys = list(self.all_possible_genes)
-        keys = sorted(keys) #paranoia - just to make sure we do not add unintentional randomization
+        recomb_loc = random.randint(1, pcl - 1) 
 
         #*** CORE RECOMBINATION CODE ****
-        for x in range(0, pcl):
-            if x < recomb_loc:
-                child1[keys[x]] = mom.geneparam[keys[x]]
-                child2[keys[x]] = dad.geneparam[keys[x]]
+        for i in range(0, pcl):
+            if i < recomb_loc:
+                child1_genes[i].transfer(child2_genes[i].value)
             else:
-                child1[keys[x]] = dad.geneparam[keys[x]]
-                child2[keys[x]] = mom.geneparam[keys[x]]
+                child2_genes[i].transfer(child1_genes[i].value)
 
         # Initialize a new genome
         # Set its parameters to those just determined
         # they both have the same mom and dad
-        genome1 = Genome( self.all_possible_genes, child1, self.ids.get_next_ID(), mom.u_ID, dad.u_ID, self.ids.get_Gen() )
-        genome2 = Genome( self.all_possible_genes, child2, self.ids.get_next_ID(), mom.u_ID, dad.u_ID, self.ids.get_Gen() )
+        genome1 = Genome(child1, self.ids.get_next_ID(), mom.u_ID, dad.u_ID, self.ids.get_Gen() )
+        genome2 = Genome(child2, self.ids.get_next_ID(), mom.u_ID, dad.u_ID, self.ids.get_Gen() )
 
         #at this point, there is zero guarantee that the genome is actually unique
 
@@ -151,22 +131,16 @@ class Evolver():
         	genome2.mutate_one_gene()
 
         #do we have a unique child or are we just retraining one we already have anyway?
-        while self.master.is_duplicate(genome1):
-            logging.debug("collision: mutate one gene...")
-            genome1.mutate_one_gene()
-
-        self.master.add_genome(genome1)
+        self.register_new_genome(genome1)
+        self.register_new_genome(genome2)
         
-        while self.master.is_duplicate(genome2):
+        return genome1, genome2
+    
+    def register_new_genome(self, genome):
+        while self.master.is_duplicate(genome):
             logging.debug("collision: mutate one gene...")
-            genome2.mutate_one_gene()
-
-        self.master.add_genome(genome2)
-        
-        children.append(genome1)
-        children.append(genome2)
-
-        return children
+            genome.mutate_one_gene()
+        self.master.add_genome(genome)
 
     def evolve(self, pop):
         """Evolve a population of genomes.
