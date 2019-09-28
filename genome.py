@@ -39,9 +39,7 @@ class Genome():
         """
         Refesh each genome's unique hash - needs to run after any genome changes.
         """
-        genh = str(self.nb_neurons()) + self.geneparam['activation'] \
-                + str(self.geneparam['nb_layers']) + self.geneparam['optimizer']
-
+        genh = str(self.geneparam)
         self.hash = hashlib.md5(genh.encode("UTF-8")).hexdigest()
 
         self.accuracy = 0.0
@@ -72,13 +70,16 @@ class Genome():
         # And then let's mutate one of the genes.
         # Make sure that this actually creates mutation
         current_value    = self.geneparam[gene_to_mutate]
-        possible_choices = copy.deepcopy(self.all_possible_genes[gene_to_mutate])
+        possible_choices = self.all_possible_genes[gene_to_mutate].copy()
         
         possible_choices.remove(current_value)
-        
-        self.geneparam[gene_to_mutate] = random.choice( possible_choices )
+        old_gene = self.geneparam[gene_to_mutate]
+        new_gene = random.choice( possible_choices )
+        self.geneparam[gene_to_mutate] = new_gene
+        logging.debug(f"mutate {gene_to_mutate}:  {old_gene} -> {new_gene} ")
 
         self.update_hash()
+
     
     def set_generation(self, generation):
         """needed when a genome is passed on from one generation to the next.
@@ -109,7 +110,7 @@ class Genome():
 
         """
         if self.accuracy == 0.0: #don't bother retraining ones we already trained 
-            self.accuracy = train_and_score_callback(self.geneparam)
+            self.accuracy = train_and_score_callback(self.geneparam.copy())
     
     def print_genome(self):
         """Print out a genome."""
@@ -128,18 +129,6 @@ class Genome():
 
     # print nb_neurons as single list
     def print_geneparam(self):
-        g = self.geneparam.copy()
-        nb_neurons = self.nb_neurons()
-        for i in range(1,7):
-          g.pop('nb_neurons_' + str(i))
-        # replace individual layer numbers with single list
-        g['nb_neurons'] = nb_neurons
-        logging.info(g)
-    
-    # convert nb_neurons_i at each layer to a single list
-    def nb_neurons(self):
-      nb_neurons = [None] * 6
-      for i in range(0,6):
-        nb_neurons[i] = self.geneparam['nb_neurons_' + str(i+1)]
+        logging.info(self.geneparam)
 
-      return nb_neurons
+

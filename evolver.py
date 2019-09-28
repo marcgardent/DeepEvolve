@@ -54,11 +54,11 @@ class Evolver():
             (list): Population of network objects
 
         """
+        self.master = AllGenomes()
         pop = []
 
-        i = 0
-
-        while i < count:
+        
+        for i in range(count):
             
             # Initialize a new genome.
             genome = Genome( self.all_possible_genes, {}, self.ids.get_next_ID(), 0, 0, self.ids.get_Gen() )
@@ -66,22 +66,14 @@ class Evolver():
             # Set it to random parameters.
             genome.set_genes_random()
 
-            if i == 0:
-                #this is where we will store all genomes
-                self.master = AllGenomes( genome )
-            else:
-                # Make sure it is unique....
-                while self.master.is_duplicate( genome ):
-                    genome.mutate_one_gene()
+            while self.master.is_duplicate( genome ):
+                genome.mutate_one_gene()
 
             # Add the genome to our population.
             pop.append(genome)
 
-            # and add to the master list
-            if i > 0:
-                self.master.add_genome(genome)
+            self.master.add_genome(genome)
 
-            i += 1
         return pop
 
     @staticmethod
@@ -160,11 +152,13 @@ class Evolver():
 
         #do we have a unique child or are we just retraining one we already have anyway?
         while self.master.is_duplicate(genome1):
+            logging.debug("collision: mutate one gene...")
             genome1.mutate_one_gene()
 
         self.master.add_genome(genome1)
         
         while self.master.is_duplicate(genome2):
+            logging.debug("collision: mutate one gene...")
             genome2.mutate_one_gene()
 
         self.master.add_genome(genome2)
@@ -184,21 +178,20 @@ class Evolver():
             (list): The evolved population of networks
 
         """
+        assert len(pop)*self.retain>=2 , f"retain factor and population are too low"
+
         #increase generation 
         self.ids.increase_Gen()
 
         # Get scores for each genome
         graded = [(self.fitness(genome), genome) for genome in pop]
 
-        #and use those scores to fill in the master list
-        for genome in pop:
-            self.master.set_accuracy(genome)
-
         # Sort on the scores.
         graded = [x[1] for x in sorted(graded, key=lambda x: x[0], reverse=True)]
 
         # Get the number we want to keep unchanged for the next cycle.
         retain_length = int(len(graded)*self.retain)
+        logging.info(f"unchanged for the next cycle: {retain_length}")
 
         # In this first step, we keep the 'top' X percent (as defined in self.retain)
         # We will not change them, except we will update the generation
@@ -207,8 +200,10 @@ class Evolver():
         # For the lower scoring ones, randomly keep some anyway.
         # This is wasteful, since we _know_ these are bad, so why keep rescoring them without modification?
         # At least we should mutate them
+            
+        mutated_length = 0
         for genome in graded[retain_length:]:
-            if self.random_select > random.random():
+            if self.random_select > random.random(): 
                 gtc = copy.deepcopy(genome)
                 
                 while self.master.is_duplicate(gtc):
@@ -217,15 +212,21 @@ class Evolver():
                 gtc.set_generation( self.ids.get_Gen() )
                 new_generation.append(gtc)
                 self.master.add_genome(gtc)
+                mutated_length  += 1
         
+        logging.info(f"mutated for the next cycle: {mutated_length}")
+
+
         # Now find out how many spots we have left to fill.
-        ng_length      = len(new_generation)
-
+        ng_length = len(new_generation)
         desired_length = len(pop) - ng_length
+        
+        
+        logging.info(f"babies for the next cycle: {desired_length}")
 
-        children       = []
-
+        
         # Add children, which are bred from pairs of remaining (i.e. very high or lower scoring) genomes.
+        children = []
         while len(children) < desired_length:
 
             # Get a random mom and dad, but, need to make sure they are distinct

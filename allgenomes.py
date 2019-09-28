@@ -11,50 +11,31 @@ class AllGenomes():
     """Store all genomes
     """
 
-    def __init__(self, firstgenome):
+    def __init__(self):
         """Initialize
         """
-
-        self.population = []
-        self.population.append(firstgenome)
+        self.population = {}
         
     def add_genome(self, genome):
         """Add the genome to our population.
         """
-
-        for i in range(0,len(self.population)):
-            if (genome.hash == self.population[i].hash):
-                logging.info("add_genome() ERROR: hash clash - duplicate genome")
-                return False
-
-        self.population.append(genome)
-
-        return True
+        if not self.is_duplicate(genome):
+            self.population[genome.hash] = genome
+            return True
+        else:
+            logging.error("add_genome(): hash clash - duplicate genome")
+            return False
+         
         
-    def set_accuracy(self, genome):
-        """Add the genome to our population.
-        """
-        
-        for i in range(0,len(self.population)):
-            if (genome.hash == self.population[i].hash):
-                self.population[i].accuracy = genome.accuracy
-                return
-    
-        logging.info("set_accuracy() ERROR: Genome not found")
-
     def is_duplicate(self, genome):
         """Add the genome to our population.
         """
-
-        for i in range(0,len(self.population)):
-            if (genome.hash == self.population[i].hash):
-                return True
-    
-        return False
+        twins = self.population.get(genome.hash, None)        
+        return twins != None
 
     def print_all_genomes(self):
         """Print out a genome.
         """
 
-        for genome in self.population:
+        for genome in self.population.values():
             genome.print_genome_ma()
