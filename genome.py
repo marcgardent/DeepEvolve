@@ -36,7 +36,11 @@ class Genome(object):
 
         """
         if self.accuracy == 0.0: #don't bother retraining ones we already trained 
+            logging.info("*"*20+ "TRAIN" + "*"*20)
+            self.print_geneparam()
             self.accuracy = train_and_score_callback(self.genes)
+            logging.info("-"*20+ "SCORE" + "-"*20)
+            self.print_genome()
 
     def set_generation(self, generation):
         """needed when a genome is passed on from one generation to the next.
