@@ -6,9 +6,9 @@ class ArrayNode(object):
         self.genes = genes
     
     @classmethod
-    def Duplicate(cls, gene, max):
+    def Duplicate(cls, gene, min, max):
         genes = [gene.clone() for l in range(max)]
-        return cls(genes, DiscretGene(range(max)))
+        return cls(genes, DiscretGene(range(min, max)))
 
     def set_genes_random(self):
         self.count.set_genes_random()
